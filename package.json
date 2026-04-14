@@ -1,0 +1,17 @@
+{
+  "dependencies": {
+    "@types/axios": "^0.9.36",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "axios": "^1.15.0",
+    "cors": "^2.8.6",
+    "express": "^5.2.1",
+    "typescript": "^6.0.2"
+  },
+  "scripts": {
+    "dev": "nodemon --watch ./src/**/*.ts --exec ts-node ./src/main.ts"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14"
+  }
+}
