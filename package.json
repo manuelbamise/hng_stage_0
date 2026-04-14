@@ -9,7 +9,7 @@
     "typescript": "^6.0.2"
   },
   "scripts": {
-    "dev": "nodemon --watch ./src/**/*.ts --exec ts-node ./src/main.ts"
+    "dev": "nodemon --watch ./src/**/*.ts --exec ts-node ./src/index.ts"
   },
   "devDependencies": {
     "nodemon": "^3.1.14"
