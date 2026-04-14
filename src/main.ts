@@ -44,7 +44,6 @@ app.get('/api/classify', async (req, res) => {
 
     const processed_at: string = new Date().toISOString();
 
-    console.log(raw_response.data);
     res.json({
       status: 'success',
       data: {
