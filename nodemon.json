@@ -1,0 +1,13 @@
+{
+  "watch": ["src"],
+  "ext": ".ts,.js",
+  "ignore": [],
+  "exec": "ts-node ./src/index.ts",
+  "verbose": true,
+  "colours": true,
+  "restartable": "rs",
+  "env": {
+    "NODE_ENV": "development",
+    "TIME_STAMP": "true"
+  }
+}
