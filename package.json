@@ -14,7 +14,8 @@
     "uuid": "^13.0.0"
   },
   "scripts": {
-    "dev": "nodemon"
+    "dev": "nodemon",
+    "build": "prisma generate && vercel build"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.13",
