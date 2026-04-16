@@ -1,7 +1,7 @@
 import express from 'express';
 import axios from 'axios';
 import cors from 'cors';
-import db from './db/db_init.js';
+import prisma from './db/db_init.js';
 import { v7 as uuidv7 } from 'uuid';
 
 const app = express();
@@ -141,120 +141,96 @@ app.post('/api/profiles', async (req, res) => {
     const { probability: country_probability, country_id } =
       nationalize_response.data.country[0];
 
-    db.get(`SELECT * FROM profiles WHERE name = ?`, [name], (err, row) => {
-      if (err) {
-        return res
-          .status(500)
-          .json({ status: 'error', message: 'Internal server error' });
-      }
-
-      if (row) {
-        return res.status(200).json({
-          status: 'success',
-          message: 'Profile already exists',
-          data: row,
-        });
-      }
-
-      db.run(
-        `INSERT INTO profiles(id, name, gender, gender_probability, sample_size, age, age_group, country_id, country_probability) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [
-          id,
-          name,
-          gender,
-          gender_probability,
-          sample_size,
-          age,
-          age_group,
-          country_id,
-          country_probability,
-        ],
-        function (err) {
-          if (err) {
-            console.error(err);
-            return res
-              .status(500)
-              .json({ status: 'error', message: 'Internal server error' });
-          }
-
-          db.get(`SELECT * FROM profiles WHERE id = ?`, [id], (err, row) => {
-            if (err) {
-              console.error(err);
-              return res
-                .status(500)
-                .json({ status: 'error', message: 'Internal server error' });
-            }
-            return res.status(201).json({ status: 'success', data: row });
-          });
+    const existingProfile = await prisma.profile.findFirst({
+      where: {
+        name: {
+          equals: name,
+          mode: 'insensitive',
         },
-      );
+      },
     });
+
+    if (existingProfile) {
+      return res.status(200).json({
+        status: 'success',
+        message: 'Profile already exists',
+        data: existingProfile,
+      });
+    }
+
+    const profile = await prisma.profile.create({
+      data: {
+        id,
+        name,
+        gender,
+        gender_probability,
+        sample_size,
+        age,
+        age_group,
+        country_id,
+        country_probability,
+      },
+    });
+
+    return res.status(201).json({ status: 'success', data: profile });
   } catch (error) {
     console.error(error);
     res.status(500).json({ status: 'error', message: 'Internal server error' });
   }
 });
 
-app.get('/api/profiles/:id', (req, res) => {
-  const { id } = req.params;
-  db.get(`SELECT * FROM profiles WHERE id = ?`, [id], (err, row) => {
-    if (err) {
-      console.error(err);
-      return res
-        .status(500)
-        .json({ status: 'error', message: 'Internal server error' });
-    }
-    if (!row) {
+app.get('/api/profiles/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const profile = await prisma.profile.findUnique({
+      where: { id },
+    });
+
+    if (!profile) {
       return res
         .status(404)
         .json({ status: 'error', message: 'Profile not found' });
     }
-    return res.status(200).json({ status: 'success', data: row });
-  });
+    return res.status(200).json({ status: 'success', data: profile });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ status: 'error', message: 'Internal server error' });
+  }
 });
 
-app.get('/api/profiles', (req, res) => {
-  const { gender, country_id, age_group } = req.query;
-  let query = `SELECT * FROM profiles`;
-  const conditions: string[] = [];
-  const params: any[] = [];
-  if (gender) {
-    conditions.push(`LOWER(gender) = LOWER(?)`);
-    params.push(gender as string);
-  }
-  if (country_id) {
-    conditions.push(`LOWER(country_id) = LOWER(?)`);
-    params.push(country_id as string);
-  }
-  if (age_group) {
-    conditions.push(`LOWER(age_group) = LOWER(?)`);
-    params.push(age_group as string);
-  }
-  if (conditions.length > 0) {
-    query += ` WHERE ${conditions.join(' AND ')}`;
-  }
-  db.all(query, params, (err, rows) => {
-    if (err) {
-      console.error(err);
-      return res
-        .status(500)
-        .json({ status: 'error', message: 'Internal server error' });
+app.get('/api/profiles', async (req, res) => {
+  try {
+    const { gender, country_id, age_group } = req.query;
+
+    const where: any = {};
+
+    if (gender) {
+      where.gender = { equals: gender as string, mode: 'insensitive' };
     }
-    return res.status(200).json({ status: 'success', data: rows });
-  });
+    if (country_id) {
+      where.country_id = { equals: country_id as string, mode: 'insensitive' };
+    }
+    if (age_group) {
+      where.age_group = { equals: age_group as string, mode: 'insensitive' };
+    }
+
+    const profiles = await prisma.profile.findMany({ where });
+    return res.status(200).json({ status: 'success', data: profiles });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ status: 'error', message: 'Internal server error' });
+  }
 });
 
-app.delete('/api/profiles/:id', (req, res) => {
-  const { id } = req.params;
-  db.run(`DELETE FROM profiles WHERE id = ?`, [id], (err) => {
-    if (err) {
-      console.error(err);
-      return res
-        .status(500)
-        .json({ status: 'error', message: 'Internal server error' });
-    }
-    return res.status(204).json();
-  });
+app.delete('/api/profiles/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    await prisma.profile.delete({ where: { id } });
+    return res.status(204).send();
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ status: 'error', message: 'Internal server error' });
+  }
 });
 
 app.listen(port, () => {
