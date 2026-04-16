@@ -66,104 +66,196 @@ app.get('/api/classify', async (req, res) => {
   }
 });
 
-// app.post('/api/profiles', async (req, res) => {
-//   const id = uuidv7();
-//   console.log(id);
-//   try {
-//     const { name } = req.body;
-//     if (!name) {
-//       return res
-//         .status(400)
-//         .json({ status: 'error', message: 'Name body parameter is required' });
-//     }
+app.post('/api/profiles', async (req, res) => {
+  const id = uuidv7();
+  try {
+    const { name } = req.body;
+    if (!name) {
+      return res
+        .status(400)
+        .json({ status: 'error', message: 'Name body parameter is required' });
+    }
 
-//     if (typeof name !== 'string') {
-//       return res
-//         .status(422)
-//         .json({ status: 'error', message: 'Name must be a string' });
-//     }
+    if (typeof name !== 'string') {
+      return res
+        .status(422)
+        .json({ status: 'error', message: 'Name must be a string' });
+    }
 
-//     const genderize_response = await axios.get(`https://api.genderize.io`, {
-//       params: { name },
-//     });
-//     const { gender, count, probability } = genderize_response.data;
+    const genderize_response = await axios.get(`https://api.genderize.io`, {
+      params: { name },
+    });
+    const { gender, count, probability } = genderize_response.data;
 
-//     if (gender == null || count == 0) {
-//       return res.status(404).json({
-//         status: 'error',
-//         message: 'No prediction available for the provided name',
-//       });
-//     }
+    if (gender == null || count == 0) {
+      return res.status(502).json({
+        status: '502',
+        message: 'Genderize returned an invalid response',
+      });
+    }
 
-//     const sample_size = count;
-//     const gender_probability = probability;
+    const sample_size = count;
+    const gender_probability = probability;
 
-//     const agify_response = await axios.get(`https://api.agify.io/`, {
-//       params: { name },
-//     });
-//     const { age } = agify_response.data;
+    const agify_response = await axios.get(`https://api.agify.io/`, {
+      params: { name },
+    });
+    const { age } = agify_response.data;
+    if (age == null) {
+      return res.status(502).json({
+        status: '502',
+        message: 'Agify returned an invalid response',
+      });
+    }
 
-//     const isChild = age <= 12;
-//     const isTeen = age > 12 && age <= 19;
-//     const isAdult = age > 19 && age <= 59;
-//     const isSenior = age > 59;
+    const isChild = age <= 12;
+    const isTeen = age > 12 && age <= 19;
+    const isAdult = age > 19 && age <= 59;
+    const isSenior = age > 59;
 
-//     const age_group = isChild
-//       ? 'child'
-//       : isTeen
-//         ? 'teen'
-//         : isAdult
-//           ? 'adult'
-//           : 'senior';
+    const age_group = isChild
+      ? 'child'
+      : isTeen
+        ? 'teen'
+        : isAdult
+          ? 'adult'
+          : 'senior';
 
-//     const nationalize_response = await axios.get(
-//       `https://api.nationalize.io/`,
-//       {
-//         params: { name },
-//       },
-//     );
-//     const { probability: country_probability, country_id } =
-//       nationalize_response.data.country[0];
+    const nationalize_response = await axios.get(
+      `https://api.nationalize.io/`,
+      {
+        params: { name },
+      },
+    );
 
-//     console.log('starting db insert');
-//     db.run(
-//       `INSERT INTO profiles(id, name, gender, gender_probability, sample_size, age, age_group, country_id, country_probability) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-//       [
-//         id,
-//         name,
-//         gender,
-//         gender_probability,
-//         sample_size,
-//         age,
-//         age_group,
-//         country_id,
-//         country_probability,
-//       ],
-//       function (err) {
-//         if (err) {
-//           console.error(err);
-//           res
-//             .status(500)
-//             .json({ status: 'error', message: 'Internal server error' });
-//         }
+    if (
+      nationalize_response.data.country == null ||
+      nationalize_response.data.country.length === 0
+    ) {
+      return res.status(502).json({
+        status: '502',
+        message: 'Nationalize returned an invalid response',
+      });
+    }
 
-//         db.get(`SELECT * FROM profiles WHERE id = ?`, [id], (err, row) => {
-//           if (err) {
-//             console.error(err);
-//             res
-//               .status(500)
-//               .json({ status: 'error', message: 'Internal server error' });
-//           }
-//           console.log(row);
-//           res.status(200).json({ status: 'success', data: row });
-//         });
-//       },
-//     );
-//   } catch (error) {
-//     console.error(error);
-//     res.status(500).json({ status: 'error', message: 'Internal server error' });
-//   }
-// });
+    const { probability: country_probability, country_id } =
+      nationalize_response.data.country[0];
+
+    db.get(`SELECT * FROM profiles WHERE name = ?`, [name], (err, row) => {
+      if (err) {
+        return res
+          .status(500)
+          .json({ status: 'error', message: 'Internal server error' });
+      }
+
+      if (row) {
+        return res.status(200).json({
+          status: 'success',
+          message: 'Profile already exists',
+          data: row,
+        });
+      }
+
+      db.run(
+        `INSERT INTO profiles(id, name, gender, gender_probability, sample_size, age, age_group, country_id, country_probability) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          id,
+          name,
+          gender,
+          gender_probability,
+          sample_size,
+          age,
+          age_group,
+          country_id,
+          country_probability,
+        ],
+        function (err) {
+          if (err) {
+            console.error(err);
+            return res
+              .status(500)
+              .json({ status: 'error', message: 'Internal server error' });
+          }
+
+          db.get(`SELECT * FROM profiles WHERE id = ?`, [id], (err, row) => {
+            if (err) {
+              console.error(err);
+              return res
+                .status(500)
+                .json({ status: 'error', message: 'Internal server error' });
+            }
+            return res.status(201).json({ status: 'success', data: row });
+          });
+        },
+      );
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ status: 'error', message: 'Internal server error' });
+  }
+});
+
+app.get('/api/profiles/:id', (req, res) => {
+  const { id } = req.params;
+  db.get(`SELECT * FROM profiles WHERE id = ?`, [id], (err, row) => {
+    if (err) {
+      console.error(err);
+      return res
+        .status(500)
+        .json({ status: 'error', message: 'Internal server error' });
+    }
+    if (!row) {
+      return res
+        .status(404)
+        .json({ status: 'error', message: 'Profile not found' });
+    }
+    return res.status(200).json({ status: 'success', data: row });
+  });
+});
+
+app.get('/api/profiles', (req, res) => {
+  const { gender, country_id, age_group } = req.query;
+  let query = `SELECT * FROM profiles`;
+  const conditions: string[] = [];
+  const params: any[] = [];
+  if (gender) {
+    conditions.push(`LOWER(gender) = LOWER(?)`);
+    params.push(gender as string);
+  }
+  if (country_id) {
+    conditions.push(`LOWER(country_id) = LOWER(?)`);
+    params.push(country_id as string);
+  }
+  if (age_group) {
+    conditions.push(`LOWER(age_group) = LOWER(?)`);
+    params.push(age_group as string);
+  }
+  if (conditions.length > 0) {
+    query += ` WHERE ${conditions.join(' AND ')}`;
+  }
+  db.all(query, params, (err, rows) => {
+    if (err) {
+      console.error(err);
+      return res
+        .status(500)
+        .json({ status: 'error', message: 'Internal server error' });
+    }
+    return res.status(200).json({ status: 'success', data: rows });
+  });
+});
+
+app.delete('/api/profiles/:id', (req, res) => {
+  const { id } = req.params;
+  db.run(`DELETE FROM profiles WHERE id = ?`, [id], (err) => {
+    if (err) {
+      console.error(err);
+      return res
+        .status(500)
+        .json({ status: 'error', message: 'Internal server error' });
+    }
+    return res.status(204).json();
+  });
+});
 
 app.listen(port, () => {
   console.log(`Server running at http://localhost:${port}`);
