@@ -1,7 +1,7 @@
 import express from 'express';
 import axios from 'axios';
 import cors from 'cors';
-import db from './db/db_init';
+import db from './db/db_init.js';
 import { v7 as uuidv7 } from 'uuid';
 
 const app = express();
