@@ -1,7 +1,7 @@
 import express from 'express';
 import axios from 'axios';
 import cors from 'cors';
-import prisma from './db/db_init.js';
+import { prisma } from '../lib/prisma.js';
 import { v7 as uuidv7 } from 'uuid';
 
 const app = express();
@@ -145,7 +145,6 @@ app.post('/api/profiles', async (req, res) => {
       where: {
         name: {
           equals: name,
-          mode: 'insensitive',
         },
       },
     });
@@ -160,7 +159,6 @@ app.post('/api/profiles', async (req, res) => {
 
     const profile = await prisma.profile.create({
       data: {
-        id,
         name,
         gender,
         gender_probability,
@@ -202,19 +200,36 @@ app.get('/api/profiles', async (req, res) => {
   try {
     const { gender, country_id, age_group } = req.query;
 
-    const where: any = {};
+    // const where: any = {};
 
-    if (gender) {
-      where.gender = { equals: gender as string, mode: 'insensitive' };
-    }
-    if (country_id) {
-      where.country_id = { equals: country_id as string, mode: 'insensitive' };
-    }
-    if (age_group) {
-      where.age_group = { equals: age_group as string, mode: 'insensitive' };
+    // if (gender) {
+    //   where.gender = { equals: gender as string, mode: 'insensitive' };
+    // }
+    // if (country_id) {
+    //   where.country_id = { equals: country_id as string, mode: 'insensitive' };
+    // }
+    // if (age_group) {
+    //   where.age_group = { equals: age_group as string, mode: 'insensitive' };
+    // }
+    if (!gender && !country_id && !age_group) {
+      const profiles = await prisma.profile.findMany();
+      return res.status(200).json({ status: 'success', data: profiles });
     }
 
-    const profiles = await prisma.profile.findMany({ where });
+    const profiles = await prisma.profile.findMany({
+      where: {
+        OR: [
+          { gender: { equals: gender as string } },
+          { country_id: { equals: country_id as string } },
+          { age_group: { equals: age_group as string } },
+        ],
+        AND: [
+          { gender: { equals: gender as string } },
+          { country_id: { equals: country_id as string } },
+          { age_group: { equals: age_group as string } },
+        ],
+      },
+    });
     return res.status(200).json({ status: 'success', data: profiles });
   } catch (error) {
     console.error(error);
