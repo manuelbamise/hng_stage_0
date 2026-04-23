@@ -3,9 +3,13 @@ import axios from 'axios';
 import cors from 'cors';
 import { prisma } from '../lib/prisma.js';
 import { v7 as uuidv7 } from 'uuid';
+import { Prisma } from '@prisma/client/extension';
 
 const app = express();
 const port = 3000;
+
+type ValidSortField = 'age' | 'created_at' | 'gender_probability';
+type ValidOrder = 'asc' | 'desc';
 
 app.use(cors());
 app.use(express.json());
@@ -166,10 +170,10 @@ app.post('/api/profiles', async (req, res) => {
         name,
         gender,
         gender_probability,
-        sample_size,
         age,
         age_group,
         country_id,
+        country_name,
         country_probability,
       },
     });
@@ -202,28 +206,117 @@ app.get('/api/profiles/:id', async (req, res) => {
 
 app.get('/api/profiles', async (req, res) => {
   try {
-    const { gender, country_id, age_group } = req.query;
+    const {
+      gender,
+      country_id,
+      age_group,
+      min_age,
+      max_age,
+      min_gender_probablity,
+      max_gender_probability,
+      sort_by,
+      order,
+      page,
+      limit,
+    } = req.query;
 
-    if (!gender && !country_id && !age_group) {
-      const profiles = await prisma.profile.findMany();
-      return res.status(200).json({ status: 'success', data: profiles });
+    const page1 = Math.max(1, parseInt(page as string) || 1);
+    const limit1 = Math.min(50, Math.max(1, parseInt(limit as string) || 10));
+    const skip = (page1 - 1) * limit1;
+
+    if (
+      !gender &&
+      !country_id &&
+      !age_group &&
+      !min_age &&
+      !max_age &&
+      !min_gender_probablity &&
+      !max_gender_probability &&
+      !sort_by &&
+      !order &&
+      !page &&
+      !limit
+    ) {
+      const profiles = await prisma.profile.findMany({
+        skip,
+        take: limit1,
+      });
+
+      const total = await prisma.profile.count();
+      return res.status(200).json({
+        status: 'success',
+        page: page1,
+        limit: limit1,
+        total,
+        data: profiles,
+      });
     }
 
+    const where: any = {};
+    if (gender) where.gender = { equals: (gender as string).toLowerCase() };
+    if (country_id) where.country_id = { equals: country_id };
+
+    const validAgeGroups = ['child', 'teen', 'adult', 'senior'];
+    if (age_group && validAgeGroups.includes(age_group as string))
+      where.age_group = { equals: age_group };
+
+    if (min_age || max_age) {
+      where.age = {};
+      if (min_age) where.age.gte = parseInt(min_age as string);
+      if (max_age) where.age.lte = parseInt(max_age as string);
+    }
+
+    if (min_gender_probablity || max_gender_probability) {
+      where.gender_probability = {};
+      if (min_gender_probablity)
+        where.gender_probability.gte = parseFloat(
+          min_gender_probablity as string,
+        );
+      if (max_gender_probability)
+        where.gender_probability.lte = parseFloat(
+          max_gender_probability as string,
+        );
+    }
+
+    const sortBy = sort_by as ValidSortField;
+    const order1 = order as ValidOrder;
+
+    // const orderBy: Prisma.ProfileOrderByWithRelationInput = {
+    //   [sortBy]: order1,
+    // };
+
     const profiles = await prisma.profile.findMany({
-      where: {
-        OR: [
-          { gender: { equals: gender as string } },
-          { country_id: { equals: country_id as string } },
-          { age_group: { equals: age_group as string } },
-        ],
-        AND: [
-          { gender: { equals: gender as string } },
-          { country_id: { equals: country_id as string } },
-          { age_group: { equals: age_group as string } },
-        ],
+      skip,
+      take: limit1,
+      where,
+      orderBy: {
+        [sortBy as string]: order1,
       },
     });
-    return res.status(200).json({ status: 'success', data: profiles });
+    const total = await prisma.profile.count({ where });
+
+    // const profiles = await prisma.profile.findMany({
+    //   where: {
+    //     OR: [
+    //       { gender: { equals: gender as string } },
+    //       { country_id: { equals: country_id as string } },
+    //       { age_group: { equals: age_group as string } },
+    //       { age: { gte: min_age, lte: max_age  } },
+    //     ],
+    //     AND: [
+    //       { gender: { equals: gender as string } },
+    //       { country_id: { equals: country_id as string } },
+    //       { age_group: { equals: age_group as string } },
+    //     ],
+    //   },
+    // });
+    return res.status(200).json({
+      status: 'success',
+      page: page1,
+      limit: limit1,
+      total: total,
+      data: profiles,
+    });
   } catch (error) {
     console.error(error);
     res.status(500).json({ status: 'error', message: 'Internal server error' });

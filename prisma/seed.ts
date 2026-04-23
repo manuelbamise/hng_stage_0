@@ -1,8 +1,8 @@
 import 'dotenv/config';
-import { PrismaClient } from '@prisma/client';
 import profileData from '../seed_profiles.json' with { type: 'json' };
+import { prisma } from '../lib/prisma.js';
 
-const prisma = new PrismaClient();
+// const prisma = new PrismaClient();
 
 const seedData = {
   profiles: [],
