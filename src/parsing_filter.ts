@@ -88,45 +88,45 @@ function extractAgePatterns(query: string): {
 
   // Pattern: "above 30", "above 30 years"
   const aboveMatch = lowerQuery.match(/above\s+(\d+)(?:\s+years)?/);
-  if (aboveMatch) {
+  if (aboveMatch?.[1]) {
     result.min_age = parseInt(aboveMatch[1]);
   }
 
   // Pattern: "below 18", "below 18 years"
   const belowMatch = lowerQuery.match(/below\s+(\d+)(?:\s+years)?/);
-  if (belowMatch) {
+  if (belowMatch?.[1]) {
     result.max_age = parseInt(belowMatch[1]);
   }
 
   // Pattern: "older than X"
   const olderMatch = lowerQuery.match(/older\s+than\s+(\d+)/);
-  if (olderMatch) {
+  if (olderMatch?.[1]) {
     result.min_age = parseInt(olderMatch[1]);
   }
 
   // Pattern: "younger than X"
   const youngerMatch = lowerQuery.match(/younger\s+than\s+(\d+)/);
-  if (youngerMatch) {
+  if (youngerMatch?.[1]) {
     result.max_age = parseInt(youngerMatch[1]);
   }
 
   // Pattern: "age 25", "aged 25"
   const ageMatch = lowerQuery.match(/(?:age\s+|aged\s+)(\d+)/);
-  if (ageMatch && !result.min_age && !result.max_age) {
+  if (ageMatch?.[1] && !result.min_age && !result.max_age) {
     result.min_age = parseInt(ageMatch[1]);
     result.max_age = parseInt(ageMatch[1]);
   }
 
   // Pattern: "between 18 and 25"
   const betweenMatch = lowerQuery.match(/between\s+(\d+)\s+and\s+(\d+)/);
-  if (betweenMatch) {
+  if (betweenMatch?.[1] && betweenMatch?.[2]) {
     result.min_age = parseInt(betweenMatch[1]);
     result.max_age = parseInt(betweenMatch[2]);
   }
 
   // Pattern: "30 years old"
   const yearsMatch = lowerQuery.match(/(\d+)\s+years\s+old/);
-  if (yearsMatch) {
+  if (yearsMatch?.[1]) {
     if (!result.min_age) result.min_age = parseInt(yearsMatch[1]);
     if (!result.max_age) result.max_age = parseInt(yearsMatch[1]);
   }
