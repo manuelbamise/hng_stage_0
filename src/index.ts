@@ -4,6 +4,7 @@ import cors from 'cors';
 import { prisma } from '../lib/prisma.js';
 import { v7 as uuidv7 } from 'uuid';
 import { Prisma } from '@prisma/client/extension';
+import { getFiltersFromQuery } from './parsing_filter.js';
 
 const app = express();
 const port = 3000;
@@ -179,6 +180,28 @@ app.post('/api/profiles', async (req, res) => {
     });
 
     return res.status(201).json({ status: 'success', data: profile });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ status: 'error', message: 'Internal server error' });
+  }
+});
+
+app.get('/api/profiles/search', async (req, res) => {
+  try {
+    const { q } = req.query;
+
+    if (!q) {
+      return res
+        .status(400)
+        .json({ status: 'error', message: 'Query parameter "q" is required' });
+    }
+
+    const filter = getFiltersFromQuery(q as string);
+
+    return res.status(200).json({
+      message: 'success',
+      data: filter,
+    });
   } catch (error) {
     console.error(error);
     res.status(500).json({ status: 'error', message: 'Internal server error' });
