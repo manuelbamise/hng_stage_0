@@ -174,7 +174,7 @@ app.post('/api/profiles', async (req, res) => {
         age,
         age_group,
         country_id,
-        country_name,
+        country_name: 'Niger',
         country_probability,
       },
     });
@@ -188,7 +188,11 @@ app.post('/api/profiles', async (req, res) => {
 
 app.get('/api/profiles/search', async (req, res) => {
   try {
-    const { q } = req.query;
+    const { q, sort_by, order, page, limit } = req.query;
+
+    const page1 = Math.max(1, parseInt(page as string) || 1);
+    const limit1 = Math.min(50, Math.max(1, parseInt(limit as string) || 10));
+    const skip = (page1 - 1) * limit1;
 
     if (!q) {
       return res
@@ -196,11 +200,55 @@ app.get('/api/profiles/search', async (req, res) => {
         .json({ status: 'error', message: 'Query parameter "q" is required' });
     }
 
-    const filter = getFiltersFromQuery(q as string);
+    // if (!order && !sort_by && !page && !limit) {
+    //   return res
+    //     .status(400)
+    //     .json({ status: 'error', message: 'Invalid query parameters' });
+    // }
+
+    const rawFilter = getFiltersFromQuery(q as string);
+
+    if (!rawFilter) {
+      return res
+        .status(400)
+        .json({ status: 'error', message: 'Unable to interpret query' });
+    }
+
+    const { min_age, max_age, gender, country_id, age_group } = rawFilter;
+
+    const where: any = {};
+    if (gender) where.gender = { equals: (gender as string).toLowerCase() };
+    if (country_id) where.country_id = { equals: country_id };
+
+    const validAgeGroups = ['child', 'teen', 'adult', 'senior'];
+    if (age_group && validAgeGroups.includes(age_group as string))
+      where.age_group = { equals: age_group };
+
+    if (min_age || max_age) {
+      where.age = {};
+      if (min_age) where.age.gte = parseInt(min_age as string);
+      if (max_age) where.age.lte = parseInt(max_age as string);
+    }
+
+    const sortBy = sort_by as ValidSortField;
+    const order1 = order as ValidOrder;
+
+    const profiles = await prisma.profile.findMany({
+      skip,
+      take: limit1,
+      where,
+      orderBy: {
+        [sortBy as string]: order1,
+      },
+    });
+    const total = await prisma.profile.count({ where });
 
     return res.status(200).json({
-      message: 'success',
-      data: filter,
+      status: 'success',
+      page: page1,
+      limit: limit1,
+      total: total,
+      data: profiles,
     });
   } catch (error) {
     console.error(error);

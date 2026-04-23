@@ -15,7 +15,7 @@ const KEYWORDS = {
     girl: 'female',
     girls: 'female',
   },
-  ageGroup: {
+  age_group: {
     child: 'child',
     children: 'child',
     kids: 'child',
@@ -38,6 +38,10 @@ const KEYWORDS = {
     ao: 'AO',
     kenya: 'KE',
     ke: 'KE',
+    china: 'CN',
+    cn: 'CN',
+    united_kingdom: 'UK',
+    uk: 'UK',
   },
 };
 
