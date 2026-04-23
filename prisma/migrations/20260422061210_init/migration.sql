@@ -4,10 +4,10 @@ CREATE TABLE "Profile" (
     "name" TEXT NOT NULL,
     "gender" TEXT NOT NULL,
     "gender_probability" REAL NOT NULL,
-    "sample_size" INTEGER NOT NULL,
     "age" INTEGER NOT NULL,
     "age_group" TEXT NOT NULL,
     "country_id" TEXT NOT NULL,
+    "country_name" TEXT NOT NULL,
     "country_probability" REAL NOT NULL,
     "created_at" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );

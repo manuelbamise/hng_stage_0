@@ -14,6 +14,8 @@ app.get('/', (req, res) => {
   res.send('HNG DISPLAY NAME: Bams_114_Backend_Track');
 });
 
+//Task 0 --->
+
 app.get('/api/classify', async (req, res) => {
   try {
     const name = req.query.name as string | undefined;
@@ -65,7 +67,9 @@ app.get('/api/classify', async (req, res) => {
     res.status(500).json({ status: 'error', message: 'Internal server error' });
   }
 });
+//Task 1 --->
 
+//Task 2 --->
 app.post('/api/profiles', async (req, res) => {
   const id = uuidv7();
   try {
@@ -200,17 +204,6 @@ app.get('/api/profiles', async (req, res) => {
   try {
     const { gender, country_id, age_group } = req.query;
 
-    // const where: any = {};
-
-    // if (gender) {
-    //   where.gender = { equals: gender as string, mode: 'insensitive' };
-    // }
-    // if (country_id) {
-    //   where.country_id = { equals: country_id as string, mode: 'insensitive' };
-    // }
-    // if (age_group) {
-    //   where.age_group = { equals: age_group as string, mode: 'insensitive' };
-    // }
     if (!gender && !country_id && !age_group) {
       const profiles = await prisma.profile.findMany();
       return res.status(200).json({ status: 'success', data: profiles });
@@ -247,6 +240,7 @@ app.delete('/api/profiles/:id', async (req, res) => {
     res.status(500).json({ status: 'error', message: 'Internal server error' });
   }
 });
+//Task 2 --->
 
 app.listen(port, () => {
   console.log(`Server running at http://localhost:${port}`);
