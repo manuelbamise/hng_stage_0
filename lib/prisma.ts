@@ -6,11 +6,11 @@ import { PrismaLibSql } from '@prisma/adapter-libsql';
 
 const connectionString = `${process.env.DATABASE_URL}`;
 
-const adapter = new PrismaBetterSqlite3({ url: env('DATABASE_URL') });
-// const adapter = new PrismaLibSql({
-//   url: env('TURSO_DATABASE_URL'),
-//   authToken: env('TURSO_AUTH_TOKEN'),
-// });
+// const adapter = new PrismaBetterSqlite3({ url: env('DATABASE_URL') });
+const adapter = new PrismaLibSql({
+  url: env('TURSO_DATABASE_URL'),
+  authToken: env('TURSO_AUTH_TOKEN'),
+});
 const prisma = new PrismaClient({ adapter });
 
 export { prisma };
